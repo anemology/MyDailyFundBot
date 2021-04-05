@@ -2,13 +2,40 @@ import json
 
 import requests
 from bs4 import BeautifulSoup
+from telegram import Bot, Update
 
 URL = "https://www.moneydj.com/funddj/ya/yp010001.djhtm?a=FTZ11"
+TOKEN = "<telegram_token>"
+MY_CHAT_ID = "<your_chat_id>"
 
 
 def lambda_handler(event, context):
-    # TODO implement
-    return {"statusCode": 200, "body": json.dumps("Hello from Lambda!")}
+    bot = Bot(TOKEN)
+
+    # 判斷是 post 以及有 body 才往下走, 代表是從 telegram 發來的 webhook
+    if event["requestContext"]["http"]["method"] != "POST" or not event.get("body"):
+        return {"statusCode": 200, "body": json.dumps("Hello from Lambda!")}
+
+    update = Update.de_json(json.loads(event.get("body")), bot)
+    chat_id = update.message.chat.id
+    text = update.message.text
+
+    response_text = text
+    if text == "/start":
+        response_text = "Started!"
+        bot.sendMessage(chat_id=chat_id, text=response_text)
+
+    if text.startswith("/url"):
+        get_url(bot)
+
+    if text.startswith("/now"):
+        get_net_value(bot)
+
+    if text.startswith("/high"):
+        get_highest_value(bot)
+
+    if text.startswith("/low"):
+        get_lowest_value(bot)
 
 
 def get_fund_data():
@@ -37,7 +64,32 @@ def get_fund_data():
     }
 
 
-def get_url():
+def get_url(bot):
     """回傳抓取的 URL"""
-    # TODO send_message
-    pass
+    bot.sendMessage(chat_id=MY_CHAT_ID, text=URL)
+
+
+def get_net_value(bot):
+    """回傳現在淨值"""
+    fund_data = get_fund_data()
+    net_value_date = fund_data.get("net_value_date")
+    net_value = fund_data.get("net_value")
+    net_value_change = fund_data.get("net_value_change")
+    text = f"淨值日期:{net_value_date}, 最新淨值:{net_value}, 每日變化:{net_value_change}"
+    bot.sendMessage(chat_id=MY_CHAT_ID, text=text)
+
+
+def get_highest_value(bot):
+    """回傳最高淨值(年)"""
+    fund_data = get_fund_data()
+    net_value_highest = fund_data.get("net_value_highest")
+    text = f"最高淨值(年):{net_value_highest}"
+    bot.sendMessage(chat_id=MY_CHAT_ID, text=text)
+
+
+def get_lowest_value(bot):
+    """回傳最低淨值(年)"""
+    fund_data = get_fund_data()
+    net_value_lowest = fund_data.get("net_value_lowest")
+    text = f"最低淨值(年):{net_value_lowest}"
+    bot.sendMessage(chat_id=MY_CHAT_ID, text=text)
