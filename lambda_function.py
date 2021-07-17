@@ -12,9 +12,18 @@ MY_CHAT_ID = "<your_chat_id>"
 def lambda_handler(event, context):
     bot = Bot(TOKEN)
 
+    # EventBridge (CloudWatch Events)
+    # 定期執行的排程
+    if event.get("source") == "aws.events":
+        get_net_value(bot)
+        return
+
     # 判斷是 post 以及有 body 才往下走, 代表是從 telegram 發來的 webhook
-    if event["requestContext"]["http"]["method"] != "POST" or not event.get("body"):
-        return {"statusCode": 200, "body": json.dumps("Hello from Lambda!")}
+    try:
+        if event["requestContext"]["http"]["method"] != "POST" or not event.get("body"):
+            return {"statusCode": 200, "body": json.dumps("Add layers!")}
+    except KeyError:
+        pass
 
     update = Update.de_json(json.loads(event.get("body")), bot)
     chat_id = update.message.chat.id
